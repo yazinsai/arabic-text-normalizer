@@ -38,6 +38,14 @@
   ],
   "author": "",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yazinsai/arabic-text-normalizer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yazinsai/arabic-text-normalizer/issues"
+  },
+  "homepage": "https://github.com/yazinsai/arabic-text-normalizer#readme",
   "devDependencies": {
     "@types/node": "^25.2.0",
     "tsup": "^8.5.1",
