@@ -1,0 +1,103 @@
+export interface NormalizeOptions {
+  /** Remove harakat/tashkeel diacritics (default: true) */
+  diacritics?: boolean;
+  /** Remove Quranic markers like sajdah, rub el hizb (default: true) */
+  markers?: boolean;
+  /** Remove verse numbers and their brackets (default: true) */
+  verseNumbers?: boolean;
+  /** Remove tatweel/kashida elongation (default: true) */
+  tatweel?: boolean;
+  /** Remove small/superscript letters (default: true) */
+  smallLetters?: boolean;
+  /** Collapse multiple whitespace to single space (default: true) */
+  collapseWhitespace?: boolean;
+}
+
+// Arabic tashkeel/harakat: U+064B-U+065F
+const DIACRITICS = /[\u064B-\u065F]/g;
+
+// Alif with madda above (آ U+0622) -> plain alif (ا U+0627)
+const ALIF_MADDA = /\u0622/g;
+
+// Superscript alif and other Quranic annotation marks: U+0670, U+06D6-U+06ED
+const QURANIC_ANNOTATIONS = /[\u0670\u06D6-\u06ED]/g;
+
+// Small letters (superscript): small high letters used in Quranic text
+// U+06E5 (small waw), U+06E6 (small ya), etc. are in QURANIC_ANNOTATIONS range
+
+// End of ayah U+06DD, start of rub el hizb U+06DE, place of sajdah U+06E9
+// These are included in QURANIC_ANNOTATIONS range (U+06D6-U+06ED)
+
+// Tatweel/kashida: U+0640
+const TATWEEL = /\u0640/g;
+
+// Ornate parentheses: U+FD3E, U+FD3F
+const ORNATE_PARENS = /[\uFD3E\uFD3F]/g;
+
+// Arabic-Indic digits: U+0660-U+0669
+// Extended Arabic-Indic digits: U+06F0-U+06F9
+const ARABIC_DIGITS = /[\u0660-\u0669\u06F0-\u06F9]/g;
+
+// Multiple whitespace
+const MULTI_WHITESPACE = /\s+/g;
+
+const DEFAULT_OPTIONS: Required<NormalizeOptions> = {
+  diacritics: true,
+  markers: true,
+  verseNumbers: true,
+  tatweel: true,
+  smallLetters: true,
+  collapseWhitespace: true,
+};
+
+/**
+ * Normalize Arabic/Quranic text by removing diacritics, markers, and decorative characters.
+ *
+ * @param text - The Arabic text to normalize
+ * @param options - Normalization options (all default to true for full normalization)
+ * @returns Normalized plain Arabic text
+ *
+ * @example
+ * ```ts
+ * import { normalize } from 'arabic-text-normalizer';
+ *
+ * // Full normalization (default)
+ * normalize('بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ');
+ * // => 'بسم الله الرحمن الرحيم'
+ *
+ * // Keep diacritics
+ * normalize('بِسْمِ', { diacritics: false });
+ * // => 'بِسْمِ'
+ * ```
+ */
+export function normalize(text: string, options: NormalizeOptions = {}): string {
+  const opts = { ...DEFAULT_OPTIONS, ...options };
+  let result = text;
+
+  if (opts.diacritics) {
+    result = result.replace(DIACRITICS, "");
+    result = result.replace(ALIF_MADDA, "\u0627"); // آ -> ا
+  }
+
+  if (opts.markers || opts.smallLetters) {
+    // QURANIC_ANNOTATIONS includes both markers and small letters
+    result = result.replace(QURANIC_ANNOTATIONS, "");
+  }
+
+  if (opts.verseNumbers) {
+    result = result.replace(ORNATE_PARENS, "");
+    result = result.replace(ARABIC_DIGITS, "");
+  }
+
+  if (opts.tatweel) {
+    result = result.replace(TATWEEL, "");
+  }
+
+  if (opts.collapseWhitespace) {
+    result = result.replace(MULTI_WHITESPACE, " ").trim();
+  }
+
+  return result;
+}
+
+export default normalize;
