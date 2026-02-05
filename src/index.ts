@@ -24,8 +24,11 @@ const ALIF_MADDA = /\u0622/g;
 // Alif wasla (ٱ U+0671) -> plain alif (ا U+0627)
 const ALIF_WASLA = /\u0671/g;
 
-// Superscript alif and other Quranic annotation marks: U+0670, U+06D6-U+06ED
-const QURANIC_ANNOTATIONS = /[\u0670\u06D6-\u06ED]/g;
+// Superscript alif (ٰ U+0670) -> plain alif (ا U+0627)
+const SUPERSCRIPT_ALIF = /\u0670/g;
+
+// Quranic annotation marks: U+06D6-U+06ED
+const QURANIC_ANNOTATIONS = /[\u06D6-\u06ED]/g;
 
 // Small letters (superscript): small high letters used in Quranic text
 // U+06E5 (small waw), U+06E6 (small ya), etc. are in QURANIC_ANNOTATIONS range
@@ -88,6 +91,7 @@ export function normalize(text: string, options: NormalizeOptions = {}): string 
     result = result.replace(DIACRITICS, "");
     result = result.replace(ALIF_MADDA, "\u0627"); // آ -> ا
     result = result.replace(ALIF_WASLA, "\u0627"); // ٱ -> ا
+    result = result.replace(SUPERSCRIPT_ALIF, "\u0627"); // ٰ -> ا
   }
 
   if (opts.markers || opts.smallLetters) {
