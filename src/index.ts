@@ -9,6 +9,8 @@ export interface NormalizeOptions {
   tatweel?: boolean;
   /** Remove small/superscript letters (default: true) */
   smallLetters?: boolean;
+  /** Remove punctuation like periods, commas, semicolons (default: true) */
+  punctuation?: boolean;
   /** Collapse multiple whitespace to single space (default: true) */
   collapseWhitespace?: boolean;
 }
@@ -18,6 +20,9 @@ const DIACRITICS = /[\u064B-\u065F]/g;
 
 // Alif with madda above (آ U+0622) -> plain alif (ا U+0627)
 const ALIF_MADDA = /\u0622/g;
+
+// Alif wasla (ٱ U+0671) -> plain alif (ا U+0627)
+const ALIF_WASLA = /\u0671/g;
 
 // Superscript alif and other Quranic annotation marks: U+0670, U+06D6-U+06ED
 const QURANIC_ANNOTATIONS = /[\u0670\u06D6-\u06ED]/g;
@@ -38,6 +43,10 @@ const ORNATE_PARENS = /[\uFD3E\uFD3F]/g;
 // Extended Arabic-Indic digits: U+06F0-U+06F9
 const ARABIC_DIGITS = /[\u0660-\u0669\u06F0-\u06F9]/g;
 
+// Common punctuation: periods, commas, colons, semicolons, exclamation, question marks, ellipsis
+// Arabic comma U+060C, Arabic semicolon U+061B, Arabic question mark U+061F
+const PUNCTUATION = /[.,;:!?…\u060C\u061B\u061F]/g;
+
 // Multiple whitespace
 const MULTI_WHITESPACE = /\s+/g;
 
@@ -47,6 +56,7 @@ const DEFAULT_OPTIONS: Required<NormalizeOptions> = {
   verseNumbers: true,
   tatweel: true,
   smallLetters: true,
+  punctuation: true,
   collapseWhitespace: true,
 };
 
@@ -77,6 +87,7 @@ export function normalize(text: string, options: NormalizeOptions = {}): string 
   if (opts.diacritics) {
     result = result.replace(DIACRITICS, "");
     result = result.replace(ALIF_MADDA, "\u0627"); // آ -> ا
+    result = result.replace(ALIF_WASLA, "\u0627"); // ٱ -> ا
   }
 
   if (opts.markers || opts.smallLetters) {
@@ -91,6 +102,10 @@ export function normalize(text: string, options: NormalizeOptions = {}): string 
 
   if (opts.tatweel) {
     result = result.replace(TATWEEL, "");
+  }
+
+  if (opts.punctuation) {
+    result = result.replace(PUNCTUATION, "");
   }
 
   if (opts.collapseWhitespace) {
