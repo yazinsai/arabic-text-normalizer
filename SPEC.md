@@ -17,7 +17,7 @@ NPM package to normalize Quranic/Arabic text by removing diacritics, markers, an
 | Sajdah markers, rub el hizb ۞, juz markers | Remove entirely |
 | Tatweel/kashida ـ | Remove |
 | Small letters (ٰ small alif, small waw, small ya) | Remove |
-| Hamza forms (أ إ آ ؤ ئ ء) | Keep distinct |
+| Hamza forms (أ إ آ ؤ ئ ء) | Keep distinct (or strip with `stripHamza` option) |
 | Alif maqsura ى vs ya ي | Keep distinct |
 | Teh marbuta ة vs heh ه | Keep distinct |
 | Whitespace after removals | Collapse to single space, trim |
@@ -40,6 +40,7 @@ normalize(text, {
   tatweel: true,         // default: true - remove kashida
   smallLetters: true,    // default: true - remove superscript letters
   collapseWhitespace: true, // default: true - collapse spaces
+  stripHamza: false,     // default: false - strip hamza carriers for Uthmani matching
 });
 ```
 
