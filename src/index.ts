@@ -13,6 +13,22 @@ export interface NormalizeOptions {
   punctuation?: boolean;
   /** Collapse multiple whitespace to single space (default: true) */
   collapseWhitespace?: boolean;
+  /**
+   * Strip hamza carriers entirely (default: false)
+   *
+   * When true, removes hamza carriers (أ إ ؤ ئ ء) entirely rather than preserving them.
+   * Also normalizes alef maqsura (ى) to ya (ي).
+   *
+   * This is useful for matching Uthmani Quran text against common Arabic:
+   * - Uthmani uses floating hamza (ـٔ) which gets stripped during normalization
+   * - Common Arabic uses hamza carriers (أ إ ؤ ئ) which would otherwise be preserved
+   *
+   * Examples:
+   * - يسألونك → يسلونك (matches Uthmani يَسْـَٔلُونَكَ)
+   * - يئوده → يوده (matches Uthmani يَـُٔودُهُ)
+   * - بشيء → بشي (matches Uthmani بِشَىْءٍ after ى→ي)
+   */
+  stripHamza?: boolean;
 }
 
 // Arabic tashkeel/harakat: U+064B-U+065F
@@ -53,6 +69,17 @@ const PUNCTUATION = /[.,;:!?…\u060C\u061B\u061F]/g;
 // Multiple whitespace
 const MULTI_WHITESPACE = /\s+/g;
 
+// Hamza forms that should be stripped to match Uthmani behavior:
+// أ (U+0623) alef-hamza above - Uthmani uses floating hamza on tatweel
+// إ (U+0625) alef-hamza below - Uthmani uses floating hamza on tatweel
+// ئ (U+0626) ya-hamza - Uthmani uses floating hamza on previous ya
+// ء (U+0621) standalone hamza
+// Note: ؤ (U+0624) is NOT stripped - it's represented the same in both common and Uthmani Arabic
+const HAMZA_TO_STRIP = /[\u0621\u0623\u0625\u0626]/g;
+
+// Alef maqsura (ى U+0649) -> ya (ي U+064A) when stripHamza is true
+const ALEF_MAQSURA = /\u0649/g;
+
 const DEFAULT_OPTIONS: Required<NormalizeOptions> = {
   diacritics: true,
   markers: true,
@@ -61,6 +88,7 @@ const DEFAULT_OPTIONS: Required<NormalizeOptions> = {
   smallLetters: true,
   punctuation: true,
   collapseWhitespace: true,
+  stripHamza: false,
 };
 
 /**
@@ -110,6 +138,14 @@ export function normalize(text: string, options: NormalizeOptions = {}): string 
 
   if (opts.punctuation) {
     result = result.replace(PUNCTUATION, "");
+  }
+
+  if (opts.stripHamza) {
+    // Strip hamza forms that are represented differently in Uthmani
+    // (أ إ ئ ء are stripped; ؤ is preserved as it's the same in both)
+    result = result.replace(HAMZA_TO_STRIP, "");
+    // Normalize alef maqsura to ya for consistent matching
+    result = result.replace(ALEF_MAQSURA, "\u064A"); // ى -> ي
   }
 
   if (opts.collapseWhitespace) {

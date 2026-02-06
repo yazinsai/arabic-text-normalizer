@@ -171,6 +171,65 @@ describe("normalize", () => {
     });
   });
 
+  describe("hamza stripping (for Uthmani/common Arabic matching)", () => {
+    it("preserves hamza forms by default", () => {
+      expect(normalize("أ إ ؤ ئ ء")).toBe("أ إ ؤ ئ ء");
+    });
+
+    it("strips alef-hamza forms when stripHamza is true", () => {
+      // Common Arabic يسألونك should match Uthmani يسلونك (floating hamza stripped)
+      expect(normalize("يسألونك", { stripHamza: true })).toBe("يسلونك");
+      expect(normalize("أنفق", { stripHamza: true })).toBe("نفق");
+      expect(normalize("إلى", { stripHamza: true })).toBe("لي"); // ى→ي too
+    });
+
+    it("strips ya-hamza when stripHamza is true", () => {
+      // Common Arabic يئوده should match Uthmani يوده
+      expect(normalize("يئوده", { stripHamza: true })).toBe("يوده");
+      expect(normalize("شيئا", { stripHamza: true })).toBe("شيا");
+    });
+
+    it("preserves waw-hamza when stripHamza is true", () => {
+      // ؤ is represented the same in both common and Uthmani Arabic
+      expect(normalize("مؤمن", { stripHamza: true })).toBe("مؤمن");
+      expect(normalize("سؤال", { stripHamza: true })).toBe("سؤال");
+    });
+
+    it("strips standalone hamza when stripHamza is true", () => {
+      expect(normalize("ماء", { stripHamza: true })).toBe("ما");
+      expect(normalize("شيء", { stripHamza: true })).toBe("شي");
+    });
+
+    it("preserves alef madda as alef when stripHamza is true", () => {
+      // آ always becomes ا (already handled by diacritics normalization)
+      expect(normalize("آمن", { stripHamza: true })).toBe("امن");
+      expect(normalize("القرآن", { stripHamza: true })).toBe("القران");
+    });
+
+    it("normalizes alef maqsura to ya when stripHamza is true", () => {
+      // For consistent matching, treat ى and ي as equivalent
+      expect(normalize("على", { stripHamza: true })).toBe("علي");
+      expect(normalize("موسى", { stripHamza: true })).toBe("موسي");
+    });
+
+    it("handles Uthmani vs common Arabic for Quran validation", () => {
+      // These are real-world cases from LLM output vs Quran corpus
+      // Uthmani: يَسْـَٔلُونَكَ → يسلونك | Common: يسألونك → يسلونك
+      expect(normalize("يسألونك", { stripHamza: true })).toBe("يسلونك");
+
+      // Uthmani: بِشَىْءٍ → بشىء → بشي | Common: بشيء → بشي
+      // (ى→ي and ء stripped)
+      expect(normalize("بشيء", { stripHamza: true })).toBe("بشي");
+
+      // Uthmani: يَـُٔودُهُ → يوده | Common: يئوده → يوده
+      expect(normalize("يئوده", { stripHamza: true })).toBe("يوده");
+
+      // ؤ is preserved - same in both Uthmani and common
+      // Uthmani: ٱلْمُؤْمِنُونَ → المؤمنون | Common: المؤمنون
+      expect(normalize("المؤمنون", { stripHamza: true })).toBe("المؤمنون");
+    });
+  });
+
   describe("options combinations", () => {
     it("can disable all normalizations", () => {
       const input = "بِسْمِ";
