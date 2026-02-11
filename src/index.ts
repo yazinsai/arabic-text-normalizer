@@ -80,6 +80,19 @@ const HAMZA_TO_STRIP = /[\u0621\u0623\u0625\u0626]/g;
 // Alef maqsura (ى U+0649) -> ya (ي U+064A) when stripHamza is true
 const ALEF_MAQSURA = /\u0649/g;
 
+// Uthmani spelling equivalents - normalize to modern Arabic form
+// These are archaic Quranic spellings that differ from modern standard Arabic:
+// - الصلوة/الصلاة (prayer) - Uthmani uses waw before taa marbuta
+// - الزكوة/الزكاة (charity) - Uthmani uses waw before taa marbuta
+// - الحيوة/الحياة (life) - Uthmani uses waw before taa marbuta
+// Pattern: وة → اة (taa marbuta always indicates word end in Arabic)
+const UTHMANI_WAW_TA = /وة/g;
+
+// Double ya in modern Arabic vs single ya in Uthmani
+// النبيين (modern) vs النبين (Uthmani)
+// This pattern catches يي sequences
+const DOUBLE_YA = /يي/g;
+
 const DEFAULT_OPTIONS: Required<NormalizeOptions> = {
   diacritics: true,
   markers: true,
@@ -119,7 +132,10 @@ export function normalize(text: string, options: NormalizeOptions = {}): string 
     result = result.replace(DIACRITICS, "");
     result = result.replace(ALIF_MADDA, "\u0627"); // آ -> ا
     result = result.replace(ALIF_WASLA, "\u0627"); // ٱ -> ا
-    result = result.replace(SUPERSCRIPT_ALIF, "\u0627"); // ٰ -> ا
+    // Strip superscript alef when preceded by regular alef (LLMs write اٰ
+    // but Uthmani has ـٰ; without this, اٰ→اا while ـٰ→ا after tatweel strip)
+    result = result.replace(/\u0627\u0670/g, "\u0627"); // اٰ -> ا
+    result = result.replace(SUPERSCRIPT_ALIF, "\u0627"); // remaining ٰ -> ا
   }
 
   if (opts.markers || opts.smallLetters) {
@@ -146,6 +162,11 @@ export function normalize(text: string, options: NormalizeOptions = {}): string 
     result = result.replace(HAMZA_TO_STRIP, "");
     // Normalize alef maqsura to ya for consistent matching
     result = result.replace(ALEF_MAQSURA, "\u064A"); // ى -> ي
+    // Normalize Uthmani spelling variants to modern form
+    // الصلوة → الصلاة, الزكوة → الزكاة, etc.
+    result = result.replace(UTHMANI_WAW_TA, "اة"); // وة → اة
+    // Normalize double ya to single ya (النبيين → النبين)
+    result = result.replace(DOUBLE_YA, "ي");
   }
 
   if (opts.collapseWhitespace) {

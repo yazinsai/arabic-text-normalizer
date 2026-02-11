@@ -228,6 +228,26 @@ describe("normalize", () => {
       // Uthmani: ٱلْمُؤْمِنُونَ → المؤمنون | Common: المؤمنون
       expect(normalize("المؤمنون", { stripHamza: true })).toBe("المؤمنون");
     });
+
+    it("normalizes Uthmani spelling variants when stripHamza is true", () => {
+      // Uthmani uses archaic spellings with waw that modern Arabic doesn't have
+      // الصلوة (Uthmani) vs الصلاة (modern) - both should normalize to الصلاة
+      expect(normalize("الصلوة", { stripHamza: true })).toBe("الصلاة");
+      expect(normalize("الصلاة", { stripHamza: true })).toBe("الصلاة");
+
+      // الزكوة (Uthmani) vs الزكاة (modern)
+      expect(normalize("الزكوة", { stripHamza: true })).toBe("الزكاة");
+      expect(normalize("الزكاة", { stripHamza: true })).toBe("الزكاة");
+
+      // الحيوة (Uthmani) vs الحياة (modern)
+      expect(normalize("الحيوة", { stripHamza: true })).toBe("الحياة");
+      expect(normalize("الحياة", { stripHamza: true })).toBe("الحياة");
+
+      // Double ya in modern vs single ya in Uthmani
+      // النبيين (modern) vs النبين (Uthmani) - both should normalize to النبين
+      expect(normalize("النبيين", { stripHamza: true })).toBe("النبين");
+      expect(normalize("النبين", { stripHamza: true })).toBe("النبين");
+    });
   });
 
   describe("options combinations", () => {
