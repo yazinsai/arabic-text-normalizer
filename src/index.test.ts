@@ -229,6 +229,36 @@ describe("normalize", () => {
       expect(normalize("المؤمنون", { stripHamza: true })).toBe("المؤمنون");
     });
 
+    it("collapses double-lam in article for Uthmani matching", () => {
+      // LLM writes بالليل (2 lams), Uthmani بٱلّيل → باليل (1 lam after shadda strip)
+      // stripHamza mode collapses الل → ال so both match
+      expect(normalize("بالليل", { stripHamza: true })).toBe("باليل");
+      expect(normalize("بِٱلَّيْلِ", { stripHamza: true })).toBe("باليل");
+      // الله → اله in stripHamza mode (both LLM and Uthmani)
+      expect(normalize("الله", { stripHamza: true })).toBe("اله");
+      expect(normalize("اللَّهِ", { stripHamza: true })).toBe("اله");
+    });
+
+    it("normalizes Farsi/Urdu yeh to Arabic yeh", () => {
+      // ی (U+06CC Farsi yeh) should normalize to ي (U+064A)
+      expect(normalize("یعلم")).toBe("يعلم");
+      expect(normalize("العلی")).toBe("العلي");
+      expect(normalize("العظیم")).toBe("العظيم");
+    });
+
+    it("normalizes alef variants to plain alef", () => {
+      // ٲ (U+0672) should normalize to ا
+      expect(normalize("السماوٲت")).toBe("السماوات");
+    });
+
+    it("normalizes Uthmani واة from superscript alef conversion", () => {
+      // Uthmani الزَّكَوٰةَ → after ٰ→ا becomes الزكواة → should normalize to الزكاة
+      expect(normalize("الزَّكَوٰةَ", { stripHamza: true })).toBe("الزكاة");
+      expect(normalize("الزكاة", { stripHamza: true })).toBe("الزكاة");
+      // Same for الصلوٰة
+      expect(normalize("الصَّلَوٰةَ", { stripHamza: true })).toBe("الصلاة");
+    });
+
     it("normalizes Uthmani spelling variants when stripHamza is true", () => {
       // Uthmani uses archaic spellings with waw that modern Arabic doesn't have
       // الصلوة (Uthmani) vs الصلاة (modern) - both should normalize to الصلاة

@@ -16,22 +16,20 @@ export interface NormalizeOptions {
   /**
    * Strip hamza carriers entirely (default: false)
    *
-   * When true, removes hamza carriers (أ إ ؤ ئ ء) entirely rather than preserving them.
-   * Also normalizes alef maqsura (ى) to ya (ي).
-   *
-   * This is useful for matching Uthmani Quran text against common Arabic:
-   * - Uthmani uses floating hamza (ـٔ) which gets stripped during normalization
-   * - Common Arabic uses hamza carriers (أ إ ؤ ئ) which would otherwise be preserved
+   * Aggressively normalizes for Uthmani ↔ common Arabic matching:
+   * - Removes hamza carriers (أ إ ئ ء) and converts ؤ→و
+   * - Normalizes alef maqsura (ى→ي) and Farsi yeh (ی→ي)
+   * - Normalizes Uthmani spelling variants (الصلوة→الصلاة)
    *
    * Examples:
    * - يسألونك → يسلونك (matches Uthmani يَسْـَٔلُونَكَ)
-   * - يئوده → يوده (matches Uthmani يَـُٔودُهُ)
+   * - يؤوده → يوده (matches Uthmani يَـُٔودُهُ)
    * - بشيء → بشي (matches Uthmani بِشَىْءٍ after ى→ي)
    */
   stripHamza?: boolean;
 }
 
-// Arabic tashkeel/harakat: U+064B-U+065F
+// Arabic tashkeel/harakat: U+064B-U+065F (includes shadda U+0651)
 const DIACRITICS = /[\u064B-\u065F]/g;
 
 // Alif with madda above (آ U+0622) -> plain alif (ا U+0627)
@@ -40,8 +38,18 @@ const ALIF_MADDA = /\u0622/g;
 // Alif wasla (ٱ U+0671) -> plain alif (ا U+0627)
 const ALIF_WASLA = /\u0671/g;
 
+// Alif variants: U+0672 (wavy hamza above), U+0673 (wavy hamza below) -> plain alif
+const ALIF_VARIANTS = /[\u0672\u0673]/g;
+
 // Superscript alif (ٰ U+0670) -> plain alif (ا U+0627)
 const SUPERSCRIPT_ALIF = /\u0670/g;
+
+// Farsi/Urdu yeh variants -> Arabic yeh (ي U+064A)
+// ی (U+06CC Farsi yeh), ے (U+06D2 yeh barree) are common in LLM output
+const FARSI_YEH = /[\u06CC\u06D2]/g;
+
+// Farsi/Urdu kaf (ک U+06A9) -> Arabic kaf (ك U+0643)
+const FARSI_KAF = /\u06A9/g;
 
 // Quranic annotation marks: U+06D6-U+06ED
 const QURANIC_ANNOTATIONS = /[\u06D6-\u06ED]/g;
@@ -85,8 +93,8 @@ const ALEF_MAQSURA = /\u0649/g;
 // - الصلوة/الصلاة (prayer) - Uthmani uses waw before taa marbuta
 // - الزكوة/الزكاة (charity) - Uthmani uses waw before taa marbuta
 // - الحيوة/الحياة (life) - Uthmani uses waw before taa marbuta
-// Pattern: وة → اة (taa marbuta always indicates word end in Arabic)
-const UTHMANI_WAW_TA = /وة/g;
+// Pattern: وة or واة → اة (واة appears when superscript alef ٰ was already converted to alef)
+const UTHMANI_WAW_TA = /وا?ة/g;
 
 // Double ya in modern Arabic vs single ya in Uthmani
 // النبيين (modern) vs النبين (Uthmani)
@@ -129,13 +137,18 @@ export function normalize(text: string, options: NormalizeOptions = {}): string 
   let result = text;
 
   if (opts.diacritics) {
+    // Strip all diacritics (tashkeel) including shadda
     result = result.replace(DIACRITICS, "");
     result = result.replace(ALIF_MADDA, "\u0627"); // آ -> ا
     result = result.replace(ALIF_WASLA, "\u0627"); // ٱ -> ا
+    result = result.replace(ALIF_VARIANTS, "\u0627"); // ٲ ٳ -> ا
     // Strip superscript alef when preceded by regular alef (LLMs write اٰ
     // but Uthmani has ـٰ; without this, اٰ→اا while ـٰ→ا after tatweel strip)
     result = result.replace(/\u0627\u0670/g, "\u0627"); // اٰ -> ا
     result = result.replace(SUPERSCRIPT_ALIF, "\u0627"); // remaining ٰ -> ا
+    // Normalize Farsi/Urdu character variants
+    result = result.replace(FARSI_YEH, "\u064A"); // ی ے -> ي
+    result = result.replace(FARSI_KAF, "\u0643"); // ک -> ك
   }
 
   if (opts.markers || opts.smallLetters) {
@@ -163,10 +176,13 @@ export function normalize(text: string, options: NormalizeOptions = {}): string 
     // Normalize alef maqsura to ya for consistent matching
     result = result.replace(ALEF_MAQSURA, "\u064A"); // ى -> ي
     // Normalize Uthmani spelling variants to modern form
-    // الصلوة → الصلاة, الزكوة → الزكاة, etc.
-    result = result.replace(UTHMANI_WAW_TA, "اة"); // وة → اة
+    // الصلوة → الصلاة, الزكوة → الزكاة, الزكواة → الزكاة
+    result = result.replace(UTHMANI_WAW_TA, "اة"); // وة/واة → اة
     // Normalize double ya to single ya (النبيين → النبين)
     result = result.replace(DOUBLE_YA, "ي");
+    // Collapse definite-article double-lam to match Uthmani لّ encoding
+    // LLM writes بالليل (2 lams), Uthmani بٱلّيل normalizes to باليل (1 lam)
+    result = result.replace(/([ا])لل/g, "$1ل");
   }
 
   if (opts.collapseWhitespace) {
