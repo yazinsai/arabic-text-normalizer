@@ -278,6 +278,33 @@ describe("normalize", () => {
       expect(normalize("النبيين", { stripHamza: true })).toBe("النبين");
       expect(normalize("النبين", { stripHamza: true })).toBe("النبين");
     });
+
+    it("normalizes known ص/س Uthmani variants when stripHamza is true", () => {
+      // Root ب-س-ط: بسطة/بصطة - both normalize to بسطة
+      expect(normalize("بسطة", { stripHamza: true })).toBe("بسطة");
+      expect(normalize("بصطة", { stripHamza: true })).toBe("بسطة");
+      expect(normalize("يبسط", { stripHamza: true })).toBe("يبسط");
+      expect(normalize("يبصط", { stripHamza: true })).toBe("يبسط");
+
+      // Root س-ي-ط-ر: المسيطرون/المصيطرون - both normalize to المسيطرون
+      expect(normalize("المسيطرون", { stripHamza: true })).toBe("المسيطرون");
+      expect(normalize("المصيطرون", { stripHamza: true })).toBe("المسيطرون");
+      expect(normalize("بمسيطر", { stripHamza: true })).toBe("بمسيطر");
+      expect(normalize("بمصيطر", { stripHamza: true })).toBe("بمسيطر");
+    });
+
+    it("does not normalize ص to س in other words when stripHamza is true", () => {
+      // الصلاة should keep its ص (not a بصط or صيطر pattern)
+      expect(normalize("الصلاة", { stripHamza: true })).toBe("الصلاة");
+      expect(normalize("الصبر", { stripHamza: true })).toBe("الصبر");
+      // اصطفى — ص stays (صط without preceding ب doesn't match)
+      expect(normalize("اصطفى", { stripHamza: true })).toBe("اصطفي");
+    });
+
+    it("does not normalize ص/س variants when stripHamza is false", () => {
+      expect(normalize("بصطة")).toBe("بصطة");
+      expect(normalize("بسطة")).toBe("بسطة");
+    });
   });
 
   describe("options combinations", () => {

@@ -41,6 +41,12 @@ var HAMZA_TO_STRIP = /[\u0621\u0623\u0625\u0626]/g;
 var ALEF_MAQSURA = /\u0649/g;
 var UTHMANI_WAW_TA = /وا?ة/g;
 var DOUBLE_YA = /يي/g;
+var SAD_SIN_VARIANTS = [
+  [/بصط/g, "\u0628\u0633\u0637"],
+  // ب-ص-ط → ب-س-ط
+  [/صيطر/g, "\u0633\u064A\u0637\u0631"]
+  // ص-ي-ط-ر → س-ي-ط-ر
+];
 var DEFAULT_OPTIONS = {
   diacritics: true,
   markers: true,
@@ -82,6 +88,9 @@ function normalize(text, options = {}) {
     result = result.replace(ALEF_MAQSURA, "\u064A");
     result = result.replace(UTHMANI_WAW_TA, "\u0627\u0629");
     result = result.replace(DOUBLE_YA, "\u064A");
+    for (const [pattern, replacement] of SAD_SIN_VARIANTS) {
+      result = result.replace(pattern, replacement);
+    }
     result = result.replace(/([ا])لل/g, "$1\u0644");
   }
   if (opts.collapseWhitespace) {

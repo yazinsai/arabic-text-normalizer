@@ -101,6 +101,16 @@ const UTHMANI_WAW_TA = /وا?ة/g;
 // This pattern catches يي sequences
 const DOUBLE_YA = /يي/g;
 
+// Sad/Sin equivalence in Uthmani orthography — specific known variants only
+// Certain Quranic words use ص in some manuscripts and س in others.
+// We normalize to the سين form for consistent matching:
+// Root ب-س-ط (to extend): بسطة/بصطة (2:247, 7:69), يبسط/يبصط (2:245)
+// Root س-ي-ط-ر (to control): المسيطرون/المصيطرون (52:37), بمسيطر/بمصيطر (88:22)
+const SAD_SIN_VARIANTS: [RegExp, string][] = [
+  [/بصط/g, 'بسط'],     // ب-ص-ط → ب-س-ط
+  [/صيطر/g, 'سيطر'],   // ص-ي-ط-ر → س-ي-ط-ر
+];
+
 const DEFAULT_OPTIONS: Required<NormalizeOptions> = {
   diacritics: true,
   markers: true,
@@ -180,6 +190,10 @@ export function normalize(text: string, options: NormalizeOptions = {}): string 
     result = result.replace(UTHMANI_WAW_TA, "اة"); // وة/واة → اة
     // Normalize double ya to single ya (النبيين → النبين)
     result = result.replace(DOUBLE_YA, "ي");
+    // Normalize known ص/س Uthmani orthographic variants to سين form
+    for (const [pattern, replacement] of SAD_SIN_VARIANTS) {
+      result = result.replace(pattern, replacement);
+    }
     // Collapse definite-article double-lam to match Uthmani لّ encoding
     // LLM writes بالليل (2 lams), Uthmani بٱلّيل normalizes to باليل (1 lam)
     result = result.replace(/([ا])لل/g, "$1ل");
